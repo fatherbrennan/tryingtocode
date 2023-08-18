@@ -94,3 +94,11 @@ const sortedObjectArray = sortAscendingByKey([...objectArray], 'id');
 //      { id: 5000, name: '0' }
 //    ]
 ```
+
+## Resources
+
+- [MDN: `Array.prototype.sort()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort)
+
+- [MDN: Shallow copy](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy)
+
+- [MDN: Spread syntax (...)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax)

@@ -53,3 +53,11 @@ const sortedStringArray = sortDescending([...stringArray]);
 const sortedNumberArray = sortDescending([...numberArray]);
 // -> [5000, 12, 9, 5, 4, 3, 2, 1, 0]
 ```
+
+## Resources
+
+- [MDN: `Array.prototype.sort()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort)
+
+- [MDN: Shallow copy](https://developer.mozilla.org/en-US/docs/Glossary/Shallow_copy)
+
+- [MDN: Spread syntax (...)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax)
