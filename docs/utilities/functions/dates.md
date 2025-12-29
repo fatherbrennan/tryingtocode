@@ -106,17 +106,10 @@ export const localTime = new Intl.DateTimeFormat(LOCAL_LANGUAGE_CODE, {
   timeZone: LOCAL_TIME_ZONE,
 });
 
-export const getLocalTimeZoneOffset = (): { offset: IsoTimeOffset; ms: UnixTimestamp } => {
-  const utcDate = new Date();
+/** return the local time zone offset. fallback to utc (should never happen). */
+export const getLocalTimeZoneOffset = (): IsoTimeOffset => {
   // use a known locale (`'en-US'`) so we can predict the output.
-  const timeZoneOffset = utcDate.toLocaleString('en-US', { timeZone: LOCAL_TIME_ZONE, timeZoneName: 'longOffset' }).match(/GMT(.+)$/m)?.[1] ?? '';
-  // only add the timezone offset if it is not utc.
-  const timeZoneDate = timeZoneOffset.length === 0 ? utcDate : new Date(utcDate.toISOString().replace('Z', timeZoneOffset));
-  const timeZoneOffsetMs = utcDate.getTime() - timeZoneDate.getTime();
-  return {
-    offset: timeZoneOffset,
-    ms: timeZoneOffsetMs,
-  };
+  return new Date().toLocaleString('en-US', { timeZone: LOCAL_TIME_ZONE, timeZoneName: 'longOffset' }).match(/GMT(.+)$/m)?.[1] ?? 'Z';
 };
 
 export const buildIsoDatetime = ({ day, month, year, hour, minute, second, millisecond, offset }: DeconstructedIsoDatetime): IsoDatetime => {
@@ -181,7 +174,7 @@ export const localDate = (isoLikeDatetimeOrUnixTs: IsoLikeDatetime | UnixTimesta
   return new Date(
     typeof isoLikeDatetimeOrUnixTs === 'number'
       ? isoLikeDatetimeOrUnixTs
-      : buildIsoDatetime({ ...deconstructIsoLikeDatetime(isoLikeDatetimeOrUnixTs), offset: getLocalTimeZoneOffset().offset })
+      : buildIsoDatetime({ ...deconstructIsoLikeDatetime(isoLikeDatetimeOrUnixTs), offset: getLocalTimeZoneOffset() })
   );
 };
 
