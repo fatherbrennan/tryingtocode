@@ -4,11 +4,11 @@
 
 ```ts
 /**
- * **date.ts**
+ * **dates.ts**
  *
- * keep in mind that every Date object is a utc date internally.
+ * keep in mind that every Date object is a utc date internally (unix timestamp).
  *
- * unix timestamp is always assumed to be in utc.
+ * unix timestamp has no time zone.
  *
  * keywords:
  * - `iso` (ISO 8601) is the international standard format for representing dates and times. `YYYY-MM-DDThh:mm:ss.sss`
