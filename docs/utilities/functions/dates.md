@@ -24,19 +24,22 @@
 export type UnixTimestampSeconds = number;
 /** unix timestamp in milliseconds. */
 export type UnixTimestamp = number;
-/** `YYYY-MM-DDThh:mm:ss.sss<IsoTimeOffset>` */
-export type IsoDatetime = string;
-/** `YYYY-MM-DD` */
-export type IsoDate = string;
-/** `hh:mm:ss` */
-export type IsoTime = string;
-/** `hh:mm:ss.sss` */
-export type IsoTimeMs = string;
 /**
  * - `'Z'` (utc)
  * - `'±hh:mm'`
  */
 export type IsoTimeOffset = string;
+/** `YYYY-MM-DD` */
+export type IsoDate = `${string}-${string}-${string}`;
+/** `hh:mm:ss.sss<IsoTimeOffset>` */
+export type IsoTime = `${string}:${string}:${string}.${string}${IsoTimeOffset}`;
+/** `hh:mm:ss` */
+export type IsoTimeHhMmSs = `${string}:${string}:${string}`;
+/** `hh:mm` */
+export type IsoTimeHhMm = `${string}:${string}`;
+/** `YYYY-MM-DDThh:mm:ss.sss<IsoTimeOffset>` */
+export type IsoDatetime = `${IsoDate}T${IsoTime}`;
+export type IsoLikeDatetime = IsoDatetime | IsoDate | IsoTime | IsoTimeHhMmSs | IsoTimeHhMm;
 
 type DeconstructedIsoDatetime = {
   year?: number;
@@ -46,7 +49,7 @@ type DeconstructedIsoDatetime = {
   minute?: number;
   second?: number;
   millisecond?: number;
-  offset?: string;
+  offset?: IsoTimeOffset;
 };
 
 export const LOCAL_LANGUAGE_CODE = 'en-AU';
@@ -85,7 +88,7 @@ export const LOCAL_TIME_ZONE = 'Australia/Adelaide';
  * - `'2025-12-28T04:24:17.71-10:30'`
  * - `'2025-12-28T04:24:17.71Z'`
  */
-export const rIsoDatetime = /^((\d\d\d\d)-([0-1][0-2])-([0-3]\d))?(T?([0-2]\d):([0-5]\d)(:([0-5]\d))?)?(\.(\d{1,3}))?([+-][0-2]\d:[0-5]\d|Z)?$/m;
+export const rIsoLikeDatetime = /^((\d\d\d\d)-([0-1][0-2])-([0-3]\d))?(T?([0-2]\d):([0-5]\d)(:([0-5]\d))?)?(\.(\d{1,3}))?([+-][0-2]\d:[0-5]\d|Z)?$/m;
 
 const commonTimeOptions = {
   hour12: false,
@@ -105,7 +108,8 @@ export const localTime = new Intl.DateTimeFormat(LOCAL_LANGUAGE_CODE, {
 
 export const getLocalTimeZoneOffset = (): { offset: IsoTimeOffset; ms: UnixTimestamp } => {
   const utcDate = new Date();
-  const timeZoneOffset = utcDate.toLocaleString(LOCAL_LANGUAGE_CODE, { timeZone: LOCAL_TIME_ZONE, timeZoneName: 'longOffset' }).match(/GMT(.+)$/m)?.[1] ?? '';
+  // use a known locale (`'en-US'`) so we can predict the output.
+  const timeZoneOffset = utcDate.toLocaleString('en-US', { timeZone: LOCAL_TIME_ZONE, timeZoneName: 'longOffset' }).match(/GMT(.+)$/m)?.[1] ?? '';
   // only add the timezone offset if it is not utc.
   const timeZoneDate = timeZoneOffset.length === 0 ? utcDate : new Date(utcDate.toISOString().replace('Z', timeZoneOffset));
   const timeZoneOffsetMs = utcDate.getTime() - timeZoneDate.getTime();
@@ -115,7 +119,7 @@ export const getLocalTimeZoneOffset = (): { offset: IsoTimeOffset; ms: UnixTimes
   };
 };
 
-export const buildIsoDatetime = ({ day, month, year, hour, minute, second, millisecond, offset }: DeconstructedIsoDatetime): string => {
+export const buildIsoDatetime = ({ day, month, year, hour, minute, second, millisecond, offset }: DeconstructedIsoDatetime): IsoDatetime => {
   /** add leading `'0'` to string based on `length`. */
   const padZero = (value: number | string, length: number) => {
     const valueString = value.toString();
@@ -131,8 +135,8 @@ export const buildIsoDatetime = ({ day, month, year, hour, minute, second, milli
 };
 
 /** return deconstructed date and time from an iso-like datetime string. see `rIsoDatetime` for valid patterns. */
-export const deconstructIsoLikeDatetime = (isoLikeDatetime: IsoDate | IsoDatetime | IsoTime | IsoTimeMs): DeconstructedIsoDatetime => {
-  const [_match, __, year, month, day, ___, hour, minute, ____, second, _____, millisecond, offset] = isoLikeDatetime.match(rIsoDatetime);
+export const deconstructIsoLikeDatetime = (isoLikeDatetime: IsoLikeDatetime): DeconstructedIsoDatetime => {
+  const [_match, __, year, month, day, ___, hour, minute, ____, second, _____, millisecond, offset] = isoLikeDatetime.match(rIsoLikeDatetime);
   const numberOrUndefined = (n: string | undefined) => (n === undefined ? undefined : +n);
 
   return {
@@ -146,13 +150,63 @@ export const deconstructIsoLikeDatetime = (isoLikeDatetime: IsoDate | IsoDatetim
     offset: offset,
   };
 };
+
+/**
+ * create a `Date` object from an iso-like datetime string or unix timestamp.
+ * overwrite the `offset` to `Z`, even when an alternative offset is provided.
+ *
+ * examples:
+ * - `2025-12-01` -> `2025-12-01T00:00:00.000Z`
+ * - `2025-12-01T00:00:00.000Z` -> `2025-12-01T00:00:00.000Z`
+ * - `2025-12-01T00:00:00.000+10:30` -> `2025-12-01T00:00:00.000Z`
+ * - `1766977249000` -> `1766977249000` (always unchanged)
+ */
+export const utcDate = (isoLikeDatetimeOrUnixTs: IsoLikeDatetime | UnixTimestamp): Date => {
+  return new Date(
+    typeof isoLikeDatetimeOrUnixTs === 'number' ? isoLikeDatetimeOrUnixTs : buildIsoDatetime({ ...deconstructIsoLikeDatetime(isoLikeDatetimeOrUnixTs), offset: 'Z' })
+  );
+};
+
+/**
+ * create a `Date` object from an iso-like datetime string or unix timestamp.
+ * overwrite the `offset` to the local time zone offset, even when an alternative offset is provided.
+ *
+ * examples (assuming the local time zone is `+10:30`):
+ * - `2025-12-01` -> `2025-12-01T00:00:00.000+10:30`
+ * - `2025-12-01T00:00:00.000Z` -> `2025-12-01T00:00:00.000+10:30`
+ * - `2025-12-01T00:00:00.000+10:30` -> `2025-12-01T00:00:00.000+10:30`
+ * - `1766977249000` -> `1766977249000` (always unchanged)
+ */
+export const localDate = (isoLikeDatetimeOrUnixTs: IsoLikeDatetime | UnixTimestamp): Date => {
+  return new Date(
+    typeof isoLikeDatetimeOrUnixTs === 'number'
+      ? isoLikeDatetimeOrUnixTs
+      : buildIsoDatetime({ ...deconstructIsoLikeDatetime(isoLikeDatetimeOrUnixTs), offset: getLocalTimeZoneOffset().offset })
+  );
+};
+
+export const getIsoDate = (isoDatetime: IsoDatetime): IsoDate => {
+  return isoDatetime.slice(0, 10) as IsoDate;
+};
+
+export const getIsoTime = (isoDatetime: IsoDatetime): IsoTime => {
+  return isoDatetime.slice(11, isoDatetime.length) as IsoTime;
+};
+
+export const getIsoTimeHhMm = (isoDatetime: IsoDatetime): IsoTimeHhMm => {
+  return isoDatetime.slice(11, 16) as IsoTimeHhMm;
+};
+
+export const getIsoTimeHhMmSs = (isoDatetime: IsoDatetime): IsoTimeHhMmSs => {
+  return isoDatetime.slice(11, 19) as IsoTimeHhMmSs;
+};
 ```
 
 ## `dates.test.ts`
 
 ```ts
 import { describe, expect, test } from 'bun:test';
-import { deconstructIsoLikeDatetime } from './dates';
+import { deconstructIsoLikeDatetime, getIsoDate, getIsoTime, getIsoTimeHhMm, getIsoTimeHhMmSs, utcDate } from './dates';
 
 describe('deconstructIsoLikeDatetime', () => {
   const d1 = '2025-12-28';
@@ -556,6 +610,53 @@ describe('deconstructIsoLikeDatetime', () => {
     expect(second).toBe(17);
     expect(millisecond).toBe(71);
     expect(offset).toBe('Z');
+  });
+});
+
+describe('utcDate', () => {
+  const d1 = '2025-12-01';
+  test(d1, () => {
+    expect(utcDate(d1).toISOString()).toBe('2025-12-01T00:00:00.000Z');
+  });
+
+  const d2 = '2025-12-01T00:00:00.000Z';
+  test(d2, () => {
+    expect(utcDate(d2).toISOString()).toBe('2025-12-01T00:00:00.000Z');
+  });
+
+  const d3 = '2025-12-01T00:00:00.000+10:30';
+  test(d3, () => {
+    expect(utcDate(d3).toISOString()).toBe('2025-12-01T00:00:00.000Z');
+  });
+
+  const d4 = 1766977249000;
+  test(d4, () => {
+    expect(utcDate(d4).getTime()).toBe(1766977249000);
+  });
+});
+
+describe('iso datetime utils', () => {
+  const isoDatetime1 = '2025-12-01T00:00:00.000Z';
+  const isoDatetime2 = '2025-12-01T12:34:56.12+10:30';
+
+  test('getIsoDate', () => {
+    expect(getIsoDate(isoDatetime1)).toBe('2025-12-01');
+    expect(getIsoDate(isoDatetime2)).toBe('2025-12-01');
+  });
+
+  test('getIsoTime', () => {
+    expect(getIsoTime(isoDatetime1)).toBe('00:00:00.000Z');
+    expect(getIsoTime(isoDatetime2)).toBe('12:34:56.12+10:30');
+  });
+
+  test('getIsoTimeHhMm', () => {
+    expect(getIsoTimeHhMm(isoDatetime1)).toBe('00:00');
+    expect(getIsoTimeHhMm(isoDatetime2)).toBe('12:34');
+  });
+
+  test('getIsoTimeHhMmSs', () => {
+    expect(getIsoTimeHhMmSs(isoDatetime1)).toBe('00:00:00');
+    expect(getIsoTimeHhMmSs(isoDatetime2)).toBe('12:34:56');
   });
 });
 ```
