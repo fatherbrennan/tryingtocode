@@ -94,7 +94,7 @@ export const rIsoLikeDatetime = /^((\d\d\d\d)-([0-1][0-2])-([0-3]\d))?(T?([0-2]\
  * - `'DD/MM/YYYY, hh:mm:ss GMT+hh:mm'`
  * - `'DD/MM/YYYY, hh:mm:ss GMT-hh:mm'`
  */
-export const rIntlLocalDatetime = /^([0-3]\d)\/([0-1][0-2])\/(\d\d\d\d), ([0-2]\d):([0-5]\d):([0-5]\d) GMT(.{0,6})/m;
+export const rIntlLocalDatetime = /^([0-3]\d)\/([0-1]\d)\/(\d\d\d\d), ([0-2]\d):([0-5]\d):([0-5]\d) GMT(.{0,6})/m;
 
 // use a known locale (`'en-AU'`) so we can predict the output.
 export const intlLocalDatetime = new Intl.DateTimeFormat('en-AU', {
