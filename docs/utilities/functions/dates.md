@@ -88,7 +88,7 @@ export const LOCAL_TIME_ZONE = 'Australia/Adelaide';
  * - `'YYYY-MM-DDThh:mm:ss.sss-hh:mm'`
  * - `'YYYY-MM-DDThh:mm:ss.sssZ'`
  */
-export const rIsoLikeDatetime = /^((\d\d\d\d)-([0-1][0-2])-([0-3]\d))?(T?([0-2]\d):([0-5]\d)(:([0-5]\d))?)?(\.(\d{1,3}))?([+-][0-2]\d:[0-5]\d|Z)?$/m;
+export const rIsoLikeDatetime = /^((\d\d\d\d)-([0-1]\d)-([0-3]\d))?(T?([0-2]\d):([0-5]\d)(:([0-5]\d))?)?(\.(\d{1,3}))?([+-][0-2]\d:[0-5]\d|Z)?$/m;
 /**
  * - `'DD/MM/YYYY, hh:mm:ss GMT'`
  * - `'DD/MM/YYYY, hh:mm:ss GMT+hh:mm'`
